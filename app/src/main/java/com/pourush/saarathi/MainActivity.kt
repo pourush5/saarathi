@@ -1,46 +1,35 @@
 package com.pourush.saarathi
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.pourush.saarathi.ui.theme.SaarathiTheme
+import androidx.core.app.ActivityCompat
+import com.pourush.saarathi.geofencing.service.GeofenceService
+import com.pourush.saarathi.geofencing.view.GeofencingScreen
+import com.pourush.saarathi.geofencing.viewModel.GeofenceViewModel
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var geofenceViewModel: GeofenceViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            SaarathiTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Greeting("Android")
-                }
-            }
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
         }
-    }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+        // Start the GeofenceService
+        startService(Intent(this, GeofenceService::class.java))
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    SaarathiTheme {
-        Greeting("Android")
+        // Initialize ViewModel with the service
+        geofenceViewModel = GeofenceViewModel(GeofenceService(), this)
+
+        setContent {
+            GeofencingScreen(geofenceViewModel)
+        }
     }
 }
