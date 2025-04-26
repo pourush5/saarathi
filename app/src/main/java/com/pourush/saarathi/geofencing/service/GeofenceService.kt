@@ -21,10 +21,12 @@ class GeofenceService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        geofencingClient = LocationServices.getGeofencingClient(this)
+        // Use the applicationContext to initialize the GeofencingClient
+        geofencingClient = LocationServices.getGeofencingClient(applicationContext)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
 
     private fun getGeofencePendingIntent(): PendingIntent {
         val intent = Intent(this, GeofenceBroadcastReceiver::class.java)
@@ -34,11 +36,13 @@ class GeofenceService : Service() {
     }
 
     fun addGeofence(geofenceModel: GeofenceModel) {
+        // Check permissions
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Log.e("GeofenceService", "Location permission not granted")
             return
         }
 
+        // Building the geofence
         val geofence = Geofence.Builder()
             .setRequestId(geofenceModel.id)
             .setCircularRegion(
@@ -50,17 +54,19 @@ class GeofenceService : Service() {
             .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
             .build()
 
+        // Build the geofencing request
         val request = GeofencingRequest.Builder()
             .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
             .addGeofence(geofence)
             .build()
 
+        // Add the geofence
         geofencingClient.addGeofences(request, getGeofencePendingIntent())
             .addOnSuccessListener {
                 Log.d("GeofenceService", "Geofence added successfully")
             }
-            .addOnFailureListener {
-                Log.e("GeofenceService", "Failed to add geofence: ${it.message}")
+            .addOnFailureListener { e ->
+                Log.e("GeofenceService", "Failed to add geofence: ${e.message}")
             }
     }
 

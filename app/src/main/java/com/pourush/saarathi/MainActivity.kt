@@ -1,35 +1,60 @@
 package com.pourush.saarathi
 
+import Navigation
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.core.app.ActivityCompat
-import com.pourush.saarathi.geofencing.service.GeofenceService
-import com.pourush.saarathi.geofencing.view.GeofencingScreen
-import com.pourush.saarathi.geofencing.viewModel.GeofenceViewModel
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var geofenceViewModel: GeofenceViewModel
+    private val requestFineLocationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            requestBackgroundLocationPermission()
+        }
+    }
+
+    private val requestBackgroundLocationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> /* optional: handle user denial */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
-        }
-
-        // Start the GeofenceService
-        startService(Intent(this, GeofenceService::class.java))
-
-        // Initialize ViewModel with the service
-        geofenceViewModel = GeofenceViewModel(GeofenceService(), this)
+        requestNecessaryLocationPermissions()
 
         setContent {
-            GeofencingScreen(geofenceViewModel)
+            Navigation()
         }
+    }
+
+    private fun requestNecessaryLocationPermissions() {
+        val fineGranted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val backgroundGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        } else true
+
+        if (!fineGranted) {
+            requestFineLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else if (!backgroundGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            requestBackgroundLocationPermission()
+        }
+    }
+
+    private fun requestBackgroundLocationPermission() {
+        requestBackgroundLocationPermissionLauncher.launch(
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        )
     }
 }
