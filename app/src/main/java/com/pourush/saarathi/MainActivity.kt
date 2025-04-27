@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +18,14 @@ class MainActivity : ComponentActivity() {
     ) { isGranted ->
         if (isGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             requestBackgroundLocationPermission()
+        }
+    }
+
+    private val requestPostNotificationsPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            Toast.makeText(this, "Notifications disabled. You might miss important alerts.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -49,6 +58,12 @@ class MainActivity : ComponentActivity() {
             requestFineLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         } else if (!backgroundGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             requestBackgroundLocationPermission()
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPostNotificationsPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
