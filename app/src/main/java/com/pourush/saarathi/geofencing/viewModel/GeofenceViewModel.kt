@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.util.Log
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import com.google.android.gms.location.*
 import com.pourush.saarathi.geofencing.service.GeofenceBroadcastReceiver
@@ -21,14 +20,15 @@ class GeofenceViewModel(application: Application) : AndroidViewModel(application
     private var chhadiLng: Double? = null
     private var chhadiRadius: Float = 100f
 
-    // Save Chhadi location
+    private var currentChhadiKey: String = ""
+
     fun addGeofence(id: String, radius: Float) {
         chhadiRadius = radius
+        currentChhadiKey = generateChhadiKey()
         Log.d("GeofenceViewModel", "Chhadi stored with radius: $radius")
-        Toast.makeText(context,"Chhadi stored with radius: $radius",Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Chhadi stored with radius: $radius", Toast.LENGTH_SHORT).show()
     }
 
-    // Actually Join (Create Geofence)
     @SuppressLint("MissingPermission")
     fun addManualGeofence(
         id: String,
@@ -45,38 +45,30 @@ class GeofenceViewModel(application: Application) : AndroidViewModel(application
             .build()
 
         val geofencingRequest = GeofencingRequest.Builder()
-            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_EXIT)
+            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
             .addGeofence(geofence)
             .build()
 
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000).build()
-
-        val locationSettingsRequest = LocationSettingsRequest.Builder()
-            .addLocationRequest(locationRequest)
-            .build()
-
-        settingsClient.checkLocationSettings(locationSettingsRequest)
-            .addOnSuccessListener {
-                geofencingClient.addGeofences(geofencingRequest, getGeofencePendingIntent())
-                    .addOnSuccessListener {
-                        Log.d("GeofenceViewModel", "Geofence added successfully")
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("GeofenceViewModel", "Failed to add geofence: ${e.message}")
-                    }
-            }
-            .addOnFailureListener { e ->
-                Log.e("GeofenceViewModel", "Location settings error: ${e.message}")
-            }
-    }
-
-    private fun getGeofencePendingIntent(): PendingIntent {
         val intent = Intent(context, GeofenceBroadcastReceiver::class.java)
-        return PendingIntent.getBroadcast(
+        val pendingIntent = PendingIntent.getBroadcast(
             context,
             0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+        geofencingClient.addGeofences(geofencingRequest, pendingIntent)
+            .addOnSuccessListener {
+                Toast.makeText(context, "Geofence added successfully", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(context, "Failed to add geofence: ${it.message}", Toast.LENGTH_SHORT).show()
+                Log.e("Geofence", "Error: ${it.message}")
+            }
+    }
+
+    private fun generateChhadiKey(): String {
+        val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        return (1..6).map { chars.random() }.joinToString("")
     }
 }
